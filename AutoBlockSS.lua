@@ -41,7 +41,6 @@ local Players = game:GetService("Players")
 local RunService = game:GetService("RunService")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local UserInputService = game:GetService("UserInputService")
-local HttpService = game:GetService("HttpService")
 
 local LightsaberRemotes = ReplicatedStorage:WaitForChild("LightsaberRemotes")
 local BlockRemote = LightsaberRemotes:WaitForChild("Block")
@@ -64,43 +63,6 @@ local Window = Rayfield:CreateWindow({
     },
     KeySystem = false,
 })
-
-local function checkForUpdates()
-    local success, result = pcall(function()
-        return HttpService:GetAsync("https://raw.githubusercontent.com/Synarcy/SaberShowdown/main/AutoBlockSS.lua")
-    end)
-    
-    if success then
-        local currentVersion = "1.0.0"
-        if result ~= currentVersion then
-            Rayfield:Notify({
-                Title = "Update Available",
-                Content = "A new version of the script is available. Please restart your game to get the latest version.",
-                Duration = 10,
-                Image = 4483362458,
-                Actions = {
-                    Ignore = {
-                        Name = "Okay",
-                        Callback = function()
-                            print("The user acknowledged the update notification.")
-                        end
-                    },
-                },
-            })
-        end
-    else
-        warn("Failed to check for updates:", result)
-    end
-end
-
-checkForUpdates()
-
-spawn(function()
-    while true do
-        wait(1) 
-        checkForUpdates()
-    end
-end)
 
 local ESPTab = Window:CreateTab("ESP Settings", 4483362458)
 local AutoBlockTab = Window:CreateTab("Auto Block", 4483362458)
