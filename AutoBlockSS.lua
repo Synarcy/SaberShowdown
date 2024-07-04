@@ -83,6 +83,7 @@ local rainbowESPEnabled = false
 local highlightThickness = 0.5
 local slapTimerEnabled = false
 local slapTimerColor = Color3.new(0, 1, 0)
+local autoHalfSwingDelay = 0.3
 
 local function updateESPColors()
     for _, player in ipairs(Players:GetPlayers()) do
@@ -220,6 +221,18 @@ local AutoHalfSwingToggle = AutoCounterTab:CreateToggle({
     Flag = "AutoHalfSwingToggle",
     Callback = function(Value)
         autoHalfSwingEnabled = Value
+    end,
+})
+
+local AutoHalfSwingSlider = AutoCounterTab:CreateSlider({
+    Name = "Auto Half Swing Delay",
+    Range = {0.1, 1},
+    Increment = 0.1,
+    Suffix = "secs",
+    CurrentValue = autoHalfSwingDelay,
+    Flag = "AutoHalfSwingDelay",
+    Callback = function(Value)
+        autoHalfSwingDelay = Value
     end,
 })
 
@@ -365,7 +378,7 @@ local function onCharacterAdded(character)
                 end
                 
                 if animName:find("Swing") and player == Players.LocalPlayer and autoHalfSwingEnabled then
-                    task.delay(0.3, function()
+                    task.delay(autoHalfSwingDelay, function()
                         mouse1click()
                     end)
                 end
