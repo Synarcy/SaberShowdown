@@ -79,23 +79,28 @@ local espOutlineColor = Color3.new(1, 1, 1)
 local espNameColor = Color3.new(1, 0, 0)
 local espDistance = 100
 local blockDistance = 20
+local autoSlapDistance = 10
 local rainbowESPEnabled = false
 local highlightThickness = 0.5
-local slapTimerEnabled = false
+local slapTimerEnabled = true
 local slapTimerColor = Color3.new(0, 1, 0)
 local autoHalfSwingDelay = 0.3
 
-local espObjects = {}
-
 local function updateESPColors()
-    for _, objects in pairs(espObjects) do
-        local highlight, nameESP = objects.highlight, objects.nameESP
-        if highlight then
-            highlight.OutlineColor = espOutlineColor
-            highlight.OutlineTransparency = 1 - highlightThickness
-        end
-        if nameESP then
-            nameESP.Color = espNameColor
+    for _, player in ipairs(Players:GetPlayers()) do
+        if player ~= Players.LocalPlayer and player.Character then
+            local espObjects = player.Character:FindFirstChild("ESPObjects")
+            if espObjects then
+                local highlight = espObjects:FindFirstChild("Highlight")
+                local nameESP = espObjects:FindFirstChild("NameESP")
+                if highlight then
+                    highlight.OutlineColor = espOutlineColor
+                    highlight.OutlineTransparency = 1 - highlightThickness
+                end
+                if nameESP then
+                    nameESP.Color = espNameColor
+                end
+            end
         end
     end
 end
@@ -149,7 +154,7 @@ local ColorPicker2 = ESPTab:CreateColorPicker({
 
 local Slider1 = ESPTab:CreateSlider({
     Name = "ESP Distance",
-    Range = {0, 1000},
+    Range = {0, 500},
     Increment = 10,
     Suffix = "studs",
     CurrentValue = espDistance,
@@ -203,7 +208,7 @@ local Slider2 = AutoBlockTab:CreateSlider({
 })
 
 local AutoCounterToggle = AutoCounterTab:CreateToggle({
-    Name = "Enable Auto Counter",
+    Name = "Enable Auto Slap",
     CurrentValue = autoCounterEnabled,
     Flag = "AutoCounterToggle",
     Callback = function(Value)
@@ -229,6 +234,18 @@ local AutoHalfSwingSlider = AutoCounterTab:CreateSlider({
     Flag = "AutoHalfSwingDelay",
     Callback = function(Value)
         autoHalfSwingDelay = Value
+    end,
+})
+
+local AutoSlapDistanceSlider = AutoCounterTab:CreateSlider({
+    Name = "Auto Slap Distance",
+    Range = {0, 50},
+    Increment = 1,
+    Suffix = "studs",
+    CurrentValue = autoSlapDistance,
+    Flag = "AutoSlapDistance",
+    Callback = function(Value)
+        autoSlapDistance = Value
     end,
 })
 
@@ -266,18 +283,7 @@ local function createPlayerESP(player)
     slapTimerESP.Size = 13
     slapTimerESP.Color = slapTimerColor
 
-    espObjects[player] = {
-        nameESP = nameESP,
-        healthBar = healthBar,
-        highlight = highlight,
-        slapTimerESP = slapTimerESP
-    }
-
-    return espObjects[player]
-end
-
-local function updateESP()
-    for player, objects in pairs(espObjects) do
+    RunService.RenderStepped:Connect(function()
         if player.Character and player.Character:FindFirstChild("HumanoidRootPart") and player.Character:FindFirstChild("Humanoid") then
             local rootPart = player.Character.HumanoidRootPart
             local humanoid = player.Character.Humanoid
@@ -285,48 +291,50 @@ local function updateESP()
             local distance = (rootPart.Position - workspace.CurrentCamera.CFrame.Position).Magnitude
             
             if onScreen and distance <= espDistance and espEnabled then
-                objects.nameESP.Text = string.format("%s [%.1f]", player.Name, distance)
-                objects.nameESP.Position = Vector2.new(vector.X, vector.Y - 40)
-                objects.nameESP.Visible = true
+                nameESP.Text = string.format("%s [%.1f]", player.Name, distance)
+                nameESP.Position = Vector2.new(vector.X, vector.Y - 40)
+                nameESP.Visible = true
 
                 local healthPercentage = humanoid.Health / humanoid.MaxHealth
-                objects.healthBar.From = Vector2.new(vector.X + 50, vector.Y - 20)
-                objects.healthBar.To = Vector2.new(vector.X + 50, vector.Y - 20 + 40 * healthPercentage)
-                objects.healthBar.Color = Color3.new(1 - healthPercentage, healthPercentage, 0)
-                objects.healthBar.Visible = true
+                healthBar.From = Vector2.new(vector.X + 50, vector.Y - 20)
+                healthBar.To = Vector2.new(vector.X + 50, vector.Y - 20 + 40 * healthPercentage)
+                healthBar.Color = Color3.new(1 - healthPercentage, healthPercentage, 0)
+                healthBar.Visible = true
 
-                objects.highlight.Enabled = true
+                highlight.Enabled = true
 
                 if rainbowESPEnabled then
                     local hue = (tick() % 5) / 5
                     local rainbowColor = Color3.fromHSV(hue, 1, 1)
-                    objects.highlight.OutlineColor = rainbowColor
-                    objects.nameESP.Color = rainbowColor
+                    highlight.OutlineColor = rainbowColor
+                    nameESP.Color = rainbowColor
                 else
-                    objects.highlight.OutlineColor = espOutlineColor
-                    objects.nameESP.Color = espNameColor
+                    highlight.OutlineColor = espOutlineColor
+                    nameESP.Color = espNameColor
                 end
-                objects.highlight.OutlineTransparency = 1 - highlightThickness
+                highlight.OutlineTransparency = 1 - highlightThickness
 
                 if slapTimerEnabled then
-                    objects.slapTimerESP.Position = Vector2.new(vector.X, vector.Y + 20)
-                    objects.slapTimerESP.Visible = true
+                    slapTimerESP.Position = Vector2.new(vector.X, vector.Y + 20)
+                    slapTimerESP.Visible = true
                 else
-                    objects.slapTimerESP.Visible = false
+                    slapTimerESP.Visible = false
                 end
             else
-                objects.nameESP.Visible = false
-                objects.healthBar.Visible = false
-                objects.highlight.Enabled = false
-                objects.slapTimerESP.Visible = false
+                nameESP.Visible = false
+                healthBar.Visible = false
+                highlight.Enabled = false
+                slapTimerESP.Visible = false
             end
         else
-            objects.nameESP.Visible = false
-            objects.healthBar.Visible = false
-            objects.highlight.Enabled = false
-            objects.slapTimerESP.Visible = false
+            nameESP.Visible = false
+            healthBar.Visible = false
+            highlight.Enabled = false
+            slapTimerESP.Visible = false
         end
-    end
+    end)
+
+    return {nameESP, healthBar, highlight, slapTimerESP}
 end
 
 local function onCharacterAdded(character)
@@ -334,7 +342,7 @@ local function onCharacterAdded(character)
     local player = Players:GetPlayerFromCharacter(character)
     
     local espObjects = createPlayerESP(player)
-    local slapTimerESP = espObjects.slapTimerESP
+    local slapTimerESP = espObjects[4]
     local canSlap = true
     
     humanoid.AnimationPlayed:Connect(function(animTrack)
@@ -351,12 +359,14 @@ local function onCharacterAdded(character)
                             local timeLeft = math.ceil(3 - (tick() - startTime))
                             slapTimerESP.Text = string.format("%d cannot slap", timeLeft)
                             slapTimerESP.Color = slapTimerColor
+                            slapTimerESP.Visible = true
                             task.wait(0.1)
                         end
                         
                         canSlap = true
                         slapTimerESP.Text = "Can slap"
                         slapTimerESP.Color = Color3.new(1, 0, 0)
+                        slapTimerESP.Visible = true
                     end)
                 end
                 
@@ -376,8 +386,11 @@ local function onCharacterAdded(character)
                             UnblockRemote:FireServer()
                             
                             if autoCounterEnabled and animName == "Slap" then
-                                VirtualInputManager:SendKeyEvent(true, Enum.KeyCode.E, false, game)
-                                VirtualInputManager:SendKeyEvent(false, Enum.KeyCode.E, false, game)
+                                if distance < autoSlapDistance then
+                                    VirtualInputManager:SendKeyEvent(true, Enum.KeyCode.E, false, game)
+                                    task.wait(0.1)
+                                    VirtualInputManager:SendKeyEvent(false, Enum.KeyCode.E, false, game)
+                                end
                             end
                         end
                     end
@@ -385,7 +398,6 @@ local function onCharacterAdded(character)
                 
                 if animName:find("Swing") and player == Players.LocalPlayer and autoHalfSwingEnabled then
                     task.delay(autoHalfSwingDelay, function()
-                        VirtualInputManager:SendMouseButtonEvent(0, 0, 0, true, game, 1)
                         mouse1click()
                     end)
                 end
