@@ -41,11 +41,11 @@ local Players = game:GetService("Players")
 local RunService = game:GetService("RunService")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local UserInputService = game:GetService("UserInputService")
+local VirtualInputManager = game:GetService("VirtualInputManager")
 
 local LightsaberRemotes = ReplicatedStorage:WaitForChild("LightsaberRemotes")
 local BlockRemote = LightsaberRemotes:WaitForChild("Block")
 local UnblockRemote = LightsaberRemotes:WaitForChild("Unblock")
-local SlapRemote = LightsaberRemotes:WaitForChild("Slap")
 
 local ESP_COLOR = Color3.new(1, 0, 0)
 local OUTLINE_THICKNESS = 3
@@ -85,21 +85,17 @@ local slapTimerEnabled = false
 local slapTimerColor = Color3.new(0, 1, 0)
 local autoHalfSwingDelay = 0.3
 
+local espObjects = {}
+
 local function updateESPColors()
-    for _, player in ipairs(Players:GetPlayers()) do
-        if player ~= Players.LocalPlayer and player.Character then
-            local espObjects = player.Character:FindFirstChild("ESPObjects")
-            if espObjects then
-                local highlight = espObjects:FindFirstChild("Highlight")
-                local nameESP = espObjects:FindFirstChild("NameESP")
-                if highlight then
-                    highlight.OutlineColor = espOutlineColor
-                    highlight.OutlineTransparency = 1 - highlightThickness
-                end
-                if nameESP then
-                    nameESP.Color = espNameColor
-                end
-            end
+    for _, objects in pairs(espObjects) do
+        local highlight, nameESP = objects.highlight, objects.nameESP
+        if highlight then
+            highlight.OutlineColor = espOutlineColor
+            highlight.OutlineTransparency = 1 - highlightThickness
+        end
+        if nameESP then
+            nameESP.Color = espNameColor
         end
     end
 end
@@ -236,8 +232,6 @@ local AutoHalfSwingSlider = AutoCounterTab:CreateSlider({
     end,
 })
 
-local espObjects = {}
-
 local function createPlayerESP(player)
     local espFolder = Instance.new("Folder")
     espFolder.Name = "ESPObjects"
@@ -272,7 +266,13 @@ local function createPlayerESP(player)
     slapTimerESP.Size = 13
     slapTimerESP.Color = slapTimerColor
 
-    espObjects[player] = {nameESP = nameESP, healthBar = healthBar, highlight = highlight, slapTimerESP = slapTimerESP}
+    espObjects[player] = {
+        nameESP = nameESP,
+        healthBar = healthBar,
+        highlight = highlight,
+        slapTimerESP = slapTimerESP
+    }
+
     return espObjects[player]
 end
 
@@ -329,8 +329,6 @@ local function updateESP()
     end
 end
 
-RunService:BindToRenderStep("UpdateESP", Enum.RenderPriority.Camera.Value, updateESP)
-
 local function onCharacterAdded(character)
     local humanoid = character:WaitForChild("Humanoid")
     local player = Players:GetPlayerFromCharacter(character)
@@ -378,7 +376,8 @@ local function onCharacterAdded(character)
                             UnblockRemote:FireServer()
                             
                             if autoCounterEnabled and animName == "Slap" then
-                                SlapRemote:FireServer()
+                                VirtualInputManager:SendKeyEvent(true, Enum.KeyCode.E, false, game)
+                                VirtualInputManager:SendKeyEvent(false, Enum.KeyCode.E, false, game)
                             end
                         end
                     end
@@ -386,6 +385,7 @@ local function onCharacterAdded(character)
                 
                 if animName:find("Swing") and player == Players.LocalPlayer and autoHalfSwingEnabled then
                     task.delay(autoHalfSwingDelay, function()
+                        VirtualInputManager:SendMouseButtonEvent(0, 0, 0, true, game, 1)
                         mouse1click()
                     end)
                 end
