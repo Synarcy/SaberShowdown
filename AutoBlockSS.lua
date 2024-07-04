@@ -67,6 +67,7 @@ local Window = Rayfield:CreateWindow({
 local ESPTab = Window:CreateTab("ESP Settings", 4483362458)
 local AutoBlockTab = Window:CreateTab("Auto Block", 4483362458)
 local AutoCounterTab = Window:CreateTab("Auto Counter", 4483362458)
+local HitboxExtenderTab = Window:CreateTab("Hitbox Extender", 4483362458)
 local creditsTab = Window:CreateTab("Credits", 4483362458)
 
 local Section = ESPTab:CreateSection("ESP Config")
@@ -75,6 +76,7 @@ local espEnabled = true
 local autoBlockEnabled = true
 local autoCounterEnabled = false
 local autoHalfSwingEnabled = false
+local hitboxExtenderEnabled = false
 local espOutlineColor = Color3.new(1, 1, 1)
 local espNameColor = Color3.new(1, 0, 0)
 local espDistance = 100
@@ -85,6 +87,8 @@ local highlightThickness = 0.5
 local slapTimerEnabled = true
 local slapTimerColor = Color3.new(0, 1, 0)
 local autoHalfSwingDelay = 0.3
+local headSize = Vector3.new(1, 1, 1)
+local humanoidRootPartSize = Vector3.new(8, 8, 8)
 
 local function updateESPColors()
     for _, player in ipairs(Players:GetPlayers()) do
@@ -249,6 +253,39 @@ local AutoSlapDistanceSlider = AutoCounterTab:CreateSlider({
     end,
 })
 
+local HitboxExtenderToggle = HitboxExtenderTab:CreateToggle({
+    Name = "Enable Hitbox Extender",
+    CurrentValue = hitboxExtenderEnabled,
+    Flag = "HitboxExtenderToggle",
+    Callback = function(Value)
+        hitboxExtenderEnabled = Value
+    end,
+})
+
+local HeadSizeSlider = HitboxExtenderTab:CreateSlider({
+    Name = "Head Size (CURRENTLY BROKEN)",
+    Range = {1, 10},
+    Increment = 1,
+    Suffix = "",
+    CurrentValue = headSize.X,
+    Flag = "HeadSize",
+    Callback = function(Value)
+        headSize = Vector3.new(Value, Value, Value)
+    end,
+})
+
+local HumanoidRootPartSizeSlider = HitboxExtenderTab:CreateSlider({
+    Name = "HumanoidRootPart Size",
+    Range = {1, 20},
+    Increment = 1,
+    Suffix = "",
+    CurrentValue = humanoidRootPartSize.X,
+    Flag = "HumanoidRootPartSize",
+    Callback = function(Value)
+        humanoidRootPartSize = Vector3.new(Value, Value, Value)
+    end,
+})
+
 local function createPlayerESP(player)
     local espFolder = Instance.new("Folder")
     espFolder.Name = "ESPObjects"
@@ -335,6 +372,57 @@ local function createPlayerESP(player)
     end)
 
     return {nameESP, healthBar, highlight, slapTimerESP}
+end
+
+local function scaleHitbox(character)
+    if character then
+        local head = character:FindFirstChild("Head")
+        local humanoidRootPart = character:FindFirstChild("HumanoidRootPart")
+
+        if head then
+            local mesh = head:FindFirstChildOfClass("SpecialMesh")
+            if mesh then
+                mesh.Scale = Vector3.new(headSize.X / head.Size.X, headSize.Y / head.Size.Y, headSize.Z / head.Size.Z)
+            else
+                local newMesh = Instance.new("SpecialMesh", head)
+                newMesh.Scale = Vector3.new(headSize.X / head.Size.X, headSize.Y / head.Size.Y, headSize.Z / head.Size.Z)
+            end
+            head.Size = headSize
+            head.CanCollide = false
+        end
+
+        if humanoidRootPart then
+            humanoidRootPart.Size = humanoidRootPartSize
+            humanoidRootPart.Transparency = 0.7
+            humanoidRootPart.BrickColor = BrickColor.new("Really blue")
+            humanoidRootPart.Material = "Neon"
+            humanoidRootPart.CanCollide = false
+        end
+    end
+end
+
+local function resetHitbox(character)
+    if character then
+        local head = character:FindFirstChild("Head")
+        local humanoidRootPart = character:FindFirstChild("HumanoidRootPart")
+
+        if head then
+            local mesh = head:FindFirstChildOfClass("SpecialMesh")
+            if mesh then
+                mesh:Destroy()
+            end
+            head.Size = Vector3.new(2, 1, 1) -- Default head size
+            head.CanCollide = true
+        end
+
+        if humanoidRootPart then
+            humanoidRootPart.Size = Vector3.new(2, 2, 1) -- Default HumanoidRootPart size
+            humanoidRootPart.Transparency = 0
+            humanoidRootPart.BrickColor = BrickColor.new("Medium stone grey")
+            humanoidRootPart.Material = "Plastic"
+            humanoidRootPart.CanCollide = true
+        end
+    end
 end
 
 local function onCharacterAdded(character)
@@ -428,7 +516,8 @@ local creditsSection = creditsTab:CreateSection("Credits")
 local creditsText = {
     "Created by xenon90 on discord",
     "If any other comissions are needed then feel free to contact me",
-    "Most of my scripts are free that i make due to it being for experience"
+    "Most of my scripts are free that i make due to it being for experience",
+    "Whoever made the hitbox expander please contact me so i can give you a credit"
 }
 
 for _, text in ipairs(creditsText) do
@@ -436,3 +525,105 @@ for _, text in ipairs(creditsText) do
 end
 
 Rayfield:LoadConfiguration()
+
+-- Implementing Hitbox Extender
+_G.HeadSize = headSize -- Adjust this value as needed
+_G.HumanoidRootPartSize = humanoidRootPartSize -- Adjust this value as needed
+_G.Disabled = false
+
+local localPlayer = game:GetService('Players').LocalPlayer
+
+local function resizeParts(character)
+    local head = character:FindFirstChild("Head")
+    local humanoidRootPart = character:FindFirstChild("HumanoidRootPart")
+
+    if not head then
+        -- Create a new head if it doesn't exist
+        local newHead = Instance.new("Part")
+        newHead.Name = "Head"
+        newHead.Size = _G.HeadSize
+        newHead.Parent = character
+    else
+        head.Size = _G.HeadSize
+        head.CanCollide = false -- Disable collision for the head
+    end
+
+    if humanoidRootPart then
+        humanoidRootPart.Size = _G.HumanoidRootPartSize
+    end
+end
+
+local function onCharacterAddedExtended(character)
+    -- Call the original onCharacterAdded function
+    onCharacterAdded(character)
+
+    -- Resize parts
+    resizeParts(character)
+
+    -- Connect to Humanoid's Died event to handle respawn
+    character:WaitForChild("Humanoid").Died:Connect(function()
+        -- Wait for the character to respawn
+        character:WaitForChild("Humanoid").Died:Wait()
+
+        -- Resize parts again after respawn
+        resizeParts(character)
+    end)
+end
+
+local function onPlayerAdded(player)
+    -- Check if the player is not the local player
+    if player ~= localPlayer then
+        -- Connect to the CharacterAdded event
+        player.CharacterAdded:Connect(onCharacterAddedExtended)
+
+        -- Apply resizing if the character already exists
+        if player.Character then
+            onCharacterAddedExtended(player.Character)
+        end
+    end
+end
+
+-- Connect to the PlayerAdded event to handle players joining the game
+game:GetService('Players').PlayerAdded:Connect(onPlayerAdded)
+
+-- Apply resizing to all current players
+for _, player in ipairs(game:GetService('Players'):GetPlayers()) do
+    onPlayerAdded(player)
+end
+
+-- Continuous loop to ensure hitboxes remain scaled
+game:GetService('RunService').RenderStepped:Connect(function()
+    if not _G.Disabled then
+        for _, player in pairs(game:GetService('Players'):GetPlayers()) do
+            if player ~= localPlayer then
+                pcall(function() 
+                    if hitboxExtenderEnabled then
+                        scaleHitbox(player.Character)
+                        -- Ensure head size is maintained
+                        if player.Character and player.Character:FindFirstChild("Head") then
+                            player.Character.Head.Size = _G.HeadSize
+                            player.Character.Head.CanCollide = false -- Disable collision for the head
+                        end
+                    else
+                        resetHitbox(player.Character)
+                    end
+                end)
+            end
+        end
+    end
+end)
+
+-- Disable collision with the local player's character
+local function disableCollision(character)
+    character.ChildAdded:Connect(function(part)
+        if part:IsA("BasePart") then
+            part.CanCollide = false
+        end
+    end)
+end
+
+localPlayer.CharacterAdded:Connect(disableCollision)
+
+if localPlayer.Character then
+    disableCollision(localPlayer.Character)
+end
