@@ -74,6 +74,7 @@ local Section = ESPTab:CreateSection("ESP Config")
 local espEnabled = true
 local autoBlockEnabled = true
 local autoCounterEnabled = false
+local autoHalfSwingEnabled = false
 local espOutlineColor = Color3.new(1, 1, 1)
 local espNameColor = Color3.new(1, 0, 0)
 local espDistance = 100
@@ -213,16 +214,14 @@ local AutoCounterToggle = AutoCounterTab:CreateToggle({
     end,
 })
 
-local function getLightsaberHilt(player)
-    if player and player.Character then
-        for _, child in pairs(player.Character:GetChildren()) do
-            if child:IsA("Model") and child.Name:match("Saber") then
-                return child:FindFirstChild("Handle") or child:FindFirstChild("Hilt")
-            end
-        end
-    end
-    return nil
-end
+local AutoHalfSwingToggle = AutoCounterTab:CreateToggle({
+    Name = "Auto Half Swing",
+    CurrentValue = autoHalfSwingEnabled,
+    Flag = "AutoHalfSwingToggle",
+    Callback = function(Value)
+        autoHalfSwingEnabled = Value
+    end,
+})
 
 local function createPlayerESP(player)
     local espFolder = Instance.new("Folder")
@@ -363,6 +362,12 @@ local function onCharacterAdded(character)
                             end
                         end
                     end
+                end
+                
+                if animName:find("Swing") and player == Players.LocalPlayer and autoHalfSwingEnabled then
+                    task.delay(0.3, function()
+                        mouse1click()
+                    end)
                 end
                 
                 break
