@@ -1,5 +1,3 @@
--- Testing
-
 local animIDs = {
     ["RightSwing"] = 12625839385,
     ["OverheadSwing"] = 12625841878,
@@ -67,14 +65,13 @@ local Window = Rayfield:CreateWindow({
     KeySystem = false,
 })
 
--- Function to check for updates
 local function checkForUpdates()
     local success, result = pcall(function()
         return HttpService:GetAsync("https://raw.githubusercontent.com/Synarcy/SaberShowdown/main/AutoBlockSS.lua")
     end)
     
     if success then
-        local currentVersion = "1.0.0" -- Replace with your current version
+        local currentVersion = "1.0.0"
         if result ~= currentVersion then
             Rayfield:Notify({
                 Title = "Update Available",
@@ -96,8 +93,14 @@ local function checkForUpdates()
     end
 end
 
--- Check for updates when the script starts
 checkForUpdates()
+
+spawn(function()
+    while true do
+        wait(1) 
+        checkForUpdates()
+    end
+end)
 
 local ESPTab = Window:CreateTab("ESP Settings", 4483362458)
 local AutoBlockTab = Window:CreateTab("Auto Block", 4483362458)
