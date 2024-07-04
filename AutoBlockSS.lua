@@ -337,6 +337,31 @@ local function createPlayerESP(player)
     return {nameESP, healthBar, highlight, slapTimerESP}
 end
 
+local function getClosestPlayer()
+    local closestPlayer = nil
+    local shortestDistance = math.huge
+    local localPlayer = Players.LocalPlayer
+    local localCharacter = localPlayer.Character
+
+    if localCharacter then
+        local localPosition = localCharacter.PrimaryPart.Position
+
+        for _, player in ipairs(Players:GetPlayers()) do
+            if player ~= localPlayer and player.Character and player.Character:FindFirstChild("HumanoidRootPart") then
+                local playerPosition = player.Character.PrimaryPart.Position
+                local distance = (playerPosition - localPosition).Magnitude
+
+                if distance < shortestDistance then
+                    closestPlayer = player
+                    shortestDistance = distance
+                end
+            end
+        end
+    end
+
+    return closestPlayer
+end
+
 local function onCharacterAdded(character)
     local humanoid = character:WaitForChild("Humanoid")
     local player = Players:GetPlayerFromCharacter(character)
@@ -344,6 +369,7 @@ local function onCharacterAdded(character)
     local espObjects = createPlayerESP(player)
     local slapTimerESP = espObjects[4]
     local canSlap = true
+    local blockEndTime = 0
     
     humanoid.AnimationPlayed:Connect(function(animTrack)
         for animName, animId in pairs(animIDs) do
@@ -408,6 +434,46 @@ local function onCharacterAdded(character)
     end)
 end
 
+local function monitorClosestPlayer()
+    local closestPlayer = getClosestPlayer()
+    if closestPlayer and closestPlayer.Character then
+        local humanoid = closestPlayer.Character:FindFirstChild("Humanoid")
+        if humanoid then
+            humanoid.AnimationPlayed:Connect(function(animTrack)
+                for animName, animId in pairs(animIDs) do
+                    if animTrack.Animation.AnimationId == "rbxassetid://" .. animId then
+                        if animName:find("Block") then
+                            blockEndTime = tick() + 0.5
+                        end
+                    end
+                end
+            end)
+        end
+    end
+end
+
+RunService.RenderStepped:Connect(function()
+    local closestPlayer = getClosestPlayer()
+    if closestPlayer and closestPlayer.Character then
+        local humanoid = closestPlayer.Character:FindFirstChild("Humanoid")
+        if humanoid and tick() > blockEndTime then
+            local localPlayer = Players.LocalPlayer
+            local localCharacter = localPlayer.Character
+            if localCharacter then
+                local localPosition = localCharacter.PrimaryPart.Position
+                local playerPosition = closestPlayer.Character.PrimaryPart.Position
+                local distance = (playerPosition - localPosition).Magnitude
+                
+                if distance < autoSlapDistance then
+                    VirtualInputManager:SendKeyEvent(true, Enum.KeyCode.E, false, game)
+                    task.wait(0.1)
+                    VirtualInputManager:SendKeyEvent(false, Enum.KeyCode.E, false, game)
+                end
+            end
+        end
+    end
+end)
+
 for _, player in ipairs(Players:GetPlayers()) do
     if player ~= Players.LocalPlayer then
         if player.Character then
@@ -436,3 +502,5 @@ for _, text in ipairs(creditsText) do
 end
 
 Rayfield:LoadConfiguration()
+
+monitorClosestPlayer()
