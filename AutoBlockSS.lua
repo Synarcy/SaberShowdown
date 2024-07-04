@@ -236,6 +236,8 @@ local AutoHalfSwingSlider = AutoCounterTab:CreateSlider({
     end,
 })
 
+local espObjects = {}
+
 local function createPlayerESP(player)
     local espFolder = Instance.new("Folder")
     espFolder.Name = "ESPObjects"
@@ -270,7 +272,12 @@ local function createPlayerESP(player)
     slapTimerESP.Size = 13
     slapTimerESP.Color = slapTimerColor
 
-    RunService.RenderStepped:Connect(function()
+    espObjects[player] = {nameESP = nameESP, healthBar = healthBar, highlight = highlight, slapTimerESP = slapTimerESP}
+    return espObjects[player]
+end
+
+local function updateESP()
+    for player, objects in pairs(espObjects) do
         if player.Character and player.Character:FindFirstChild("HumanoidRootPart") and player.Character:FindFirstChild("Humanoid") then
             local rootPart = player.Character.HumanoidRootPart
             local humanoid = player.Character.Humanoid
@@ -278,58 +285,58 @@ local function createPlayerESP(player)
             local distance = (rootPart.Position - workspace.CurrentCamera.CFrame.Position).Magnitude
             
             if onScreen and distance <= espDistance and espEnabled then
-                nameESP.Text = string.format("%s [%.1f]", player.Name, distance)
-                nameESP.Position = Vector2.new(vector.X, vector.Y - 40)
-                nameESP.Visible = true
+                objects.nameESP.Text = string.format("%s [%.1f]", player.Name, distance)
+                objects.nameESP.Position = Vector2.new(vector.X, vector.Y - 40)
+                objects.nameESP.Visible = true
 
                 local healthPercentage = humanoid.Health / humanoid.MaxHealth
-                healthBar.From = Vector2.new(vector.X + 50, vector.Y - 20)
-                healthBar.To = Vector2.new(vector.X + 50, vector.Y - 20 + 40 * healthPercentage)
-                healthBar.Color = Color3.new(1 - healthPercentage, healthPercentage, 0)
-                healthBar.Visible = true
+                objects.healthBar.From = Vector2.new(vector.X + 50, vector.Y - 20)
+                objects.healthBar.To = Vector2.new(vector.X + 50, vector.Y - 20 + 40 * healthPercentage)
+                objects.healthBar.Color = Color3.new(1 - healthPercentage, healthPercentage, 0)
+                objects.healthBar.Visible = true
 
-                highlight.Enabled = true
+                objects.highlight.Enabled = true
 
                 if rainbowESPEnabled then
                     local hue = (tick() % 5) / 5
                     local rainbowColor = Color3.fromHSV(hue, 1, 1)
-                    highlight.OutlineColor = rainbowColor
-                    nameESP.Color = rainbowColor
+                    objects.highlight.OutlineColor = rainbowColor
+                    objects.nameESP.Color = rainbowColor
                 else
-                    highlight.OutlineColor = espOutlineColor
-                    nameESP.Color = espNameColor
+                    objects.highlight.OutlineColor = espOutlineColor
+                    objects.nameESP.Color = espNameColor
                 end
-                highlight.OutlineTransparency = 1 - highlightThickness
+                objects.highlight.OutlineTransparency = 1 - highlightThickness
 
                 if slapTimerEnabled then
-                    slapTimerESP.Position = Vector2.new(vector.X, vector.Y + 20)
-                    slapTimerESP.Visible = true
+                    objects.slapTimerESP.Position = Vector2.new(vector.X, vector.Y + 20)
+                    objects.slapTimerESP.Visible = true
                 else
-                    slapTimerESP.Visible = false
+                    objects.slapTimerESP.Visible = false
                 end
             else
-                nameESP.Visible = false
-                healthBar.Visible = false
-                highlight.Enabled = false
-                slapTimerESP.Visible = false
+                objects.nameESP.Visible = false
+                objects.healthBar.Visible = false
+                objects.highlight.Enabled = false
+                objects.slapTimerESP.Visible = false
             end
         else
-            nameESP.Visible = false
-            healthBar.Visible = false
-            highlight.Enabled = false
-            slapTimerESP.Visible = false
+            objects.nameESP.Visible = false
+            objects.healthBar.Visible = false
+            objects.highlight.Enabled = false
+            objects.slapTimerESP.Visible = false
         end
-    end)
-
-    return {nameESP, healthBar, highlight, slapTimerESP}
+    end
 end
+
+RunService:BindToRenderStep("UpdateESP", Enum.RenderPriority.Camera.Value, updateESP)
 
 local function onCharacterAdded(character)
     local humanoid = character:WaitForChild("Humanoid")
     local player = Players:GetPlayerFromCharacter(character)
     
     local espObjects = createPlayerESP(player)
-    local slapTimerESP = espObjects[4]
+    local slapTimerESP = espObjects.slapTimerESP
     local canSlap = true
     
     humanoid.AnimationPlayed:Connect(function(animTrack)
